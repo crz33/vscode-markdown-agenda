@@ -10,16 +10,16 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:vscode-markdown-agenda.helloWorld"
+		"onView:markdownAgenda"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [
-			{
-				"command": "vscode-markdown-agenda.helloWorld",
-				"title": "Hello World"
-			}
-		]
+		"views": {
+			"explorer" : [{
+				"id": "markdownAgenda",
+				"name": "Agenda"
+			}]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
