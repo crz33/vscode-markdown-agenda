@@ -10,16 +10,16 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onView:markdownAgenda"
+		"onCommand:markdown.agenda"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"views": {
-			"explorer" : [{
-				"id": "markdownAgenda",
-				"name": "Agenda"
-			}]
-		}
+		"commands": [
+			{
+				"command": "markdown.agenda",
+				"title": "Markdown Agenda: Open Agenda View"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
