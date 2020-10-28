@@ -18,6 +18,9 @@ export function activate(context: vscode.ExtensionContext) {
       await vscode.window.showTextDocument(doc, { preview: false });
     })
   );
+
+  // Agenda Commands
+  agendaDataProvider.bindCommands(context);
 }
 
 export function deactivate() {}
