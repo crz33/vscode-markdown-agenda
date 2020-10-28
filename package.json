@@ -25,6 +25,41 @@
 				"command": "a",
 				"key": "a",
 				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "f",
+				"key": "f",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "b",
+				"key": "b",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "v",
+				"key": "v",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "w",
+				"key": "w",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "m",
+				"key": "m",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "y",
+				"key": "y",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": ".",
+				"key": ".",
+				"when": "resourceScheme == markdown-agenda"
 			}
 		],
 		"configuration" : {
