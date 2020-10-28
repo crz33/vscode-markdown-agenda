@@ -3,7 +3,7 @@ import { AgendaDataProvider } from "./agenda";
 
 export function activate(context: vscode.ExtensionContext) {
   // Prefix of this extention
-  const agendaPrefix = "markdown.agenda";
+  const agendaPrefix = "markdown-agenda";
 
   // Agenda Scheme and Provider
   const agendaDataProvider = new AgendaDataProvider();

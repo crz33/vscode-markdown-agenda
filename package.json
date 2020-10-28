@@ -1,6 +1,6 @@
 {
-	"name": "vscode-markdown-agenda",
-	"displayName": "vscode-markdown-agenda",
+	"name": "markdown-agenda",
+	"displayName": "Markdown Agenda",
 	"description": "Provides VSCode with features like the agenda feature of emacs org-mode.",
 	"version": "0.0.1",
 	"engines": {
@@ -10,13 +10,13 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:markdown.agenda"
+		"onCommand:markdown-agenda"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "markdown.agenda",
+				"command": "markdown-agenda",
 				"title": "Markdown Agenda: Open Agenda View"
 			}
 		],
@@ -24,9 +24,21 @@
 			{
 				"command": "a",
 				"key": "a",
-				"when": "resourceScheme == markdown.agenda"
+				"when": "resourceScheme == markdown-agenda"
 			}
-		]
+		],
+		"configuration" : {
+			"title": "Markdown Agenda",
+			"properties": {
+				"markdown-agenda.agenda.startOfWeek" : {
+					"type": "integer",
+					"default": 1,
+					"minimum": 0,
+					"maximum": 6,
+					"description": "Specifies start of week. 0 is Sunday."
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

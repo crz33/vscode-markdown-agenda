@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as moment from "moment";
 
-const AGENDA_PREFIX = "markdown.agenda";
+const AGENDA_PREFIX = "markdown-agenda";
 
 const MSG_WELCOME = [
   "Press key for an agenda command:", //
@@ -93,7 +93,8 @@ class AgendaView implements View {
   }
 
   makeView() {
-    const head = this.now.clone().day(0);
+    const startOfWeek = getConf("agenda.startOfWeek") as number;
+    const head = this.now.clone().day(startOfWeek);
     const lines: string[] = [];
     for (let i = 0; i < 7; i++) {
       lines.push(head.format("YYYY/MM/DD (ddd)"));
@@ -107,3 +108,7 @@ abstract class View {
   abstract receiveCommand(): ResultOfCommand;
   abstract makeView(): string;
 }
+
+const getConf = (id: string): any => {
+  return vscode.workspace.getConfiguration(AGENDA_PREFIX).get(id);
+};
