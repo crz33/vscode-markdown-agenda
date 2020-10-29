@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as moment from "moment";
+import { Context } from "./context";
 
 const AGENDA_PREFIX = "markdown-agenda";
 
@@ -39,20 +40,21 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
   private agendaView: AgendaView;
   private currentView: View | undefined;
 
-  constructor() {
+  constructor(private appContext: Context) {
     this.viewUri = undefined;
-    this.agendaView = new AgendaView();
+    this.agendaView = new AgendaView(this.appContext);
     this.currentView = undefined;
+    this.bindCommands();
   }
 
-  bindCommands(context: vscode.ExtensionContext) {
+  private bindCommands() {
     COMMANDS.forEach((command) => {
-      context.subscriptions.push(
+      this.appContext.vscodeContext.subscriptions.push(
         vscode.commands.registerCommand(command.key, () => {
           this.handleCommand(command.id); // bind key to command
         })
       );
-      context.subscriptions.push(
+      this.appContext.vscodeContext.subscriptions.push(
         vscode.commands.registerCommand(command.id, () => {
           this.handleCommand(command.id); // bind id to command
         })
@@ -60,8 +62,8 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
     });
   }
 
-  handleCommand(id: string) {
-    console.log(`command : ${id}`);
+  private handleCommand(id: string) {
+    this.appContext.debug(`"${id}" is handled.`);
     if (!this.currentView) {
       if (cmdEq(id, "showAgenda")) {
         this.currentView = this.agendaView; // switch agenda view
@@ -75,7 +77,7 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
     }
   }
 
-  reflesh() {
+  private reflesh() {
     jump2line(0);
     this.onDidChangeEmitter.fire(this.viewUri as vscode.Uri);
   }
@@ -95,7 +97,7 @@ class AgendaView implements View {
   private rangeType: TypeOfRange;
   private waitNextCommand: boolean;
 
-  constructor() {
+  constructor(private appContext: Context) {
     moment.locale("ja");
     this.startDate = moment();
     this.rangeType = "W";
@@ -117,13 +119,13 @@ class AgendaView implements View {
     const newStateDate = moment();
     newStateDate.hour(0).minute(0).second(0).millisecond(0);
     if (rangeType === "W" || rangeType === "F") {
-      newStateDate.day(getConf("agenda.startOfWeek"));
+      newStateDate.day(this.appContext.getConf("agenda.startOfWeek"));
     } else if (rangeType === "M") {
       newStateDate.date(1);
     } else if (rangeType === "Y") {
       newStateDate.date(1).month(0);
     } else {
-      newStateDate.day(getConf("agenda.startOfWeek"));
+      newStateDate.day(this.appContext.getConf("agenda.startOfWeek"));
     }
     if (newStateDate.diff(this.startDate, "days") !== 0) {
       changed = true;
@@ -139,7 +141,7 @@ class AgendaView implements View {
   }
 
   receiveCommand(id: string): ResultOfCommand {
-    console.log(`recieve : ${id}`);
+    this.appContext.debug(`"${id}" is received.`);
 
     if (this.waitNextCommand) {
       this.waitNextCommand = false;
@@ -164,7 +166,7 @@ class AgendaView implements View {
       const result = this.init(this.rangeType);
       if (result === "unchanged") {
         // TODO fixme : move!!
-        console.log("move today");
+        this.appContext.debug("FIXME move today");
       }
       return result;
     } else if (cmdEq(id, "selectRangePrefix")) {
@@ -221,10 +223,6 @@ abstract class View {
   abstract receiveCommand(id: string): ResultOfCommand;
   abstract makeView(): string;
 }
-
-const getConf = (id: string): any => {
-  return vscode.workspace.getConfiguration(AGENDA_PREFIX).get(id);
-};
 
 const cmdEq = (id: string, name: string): boolean => {
   return id === `${AGENDA_PREFIX}.${name}`;

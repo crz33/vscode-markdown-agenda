@@ -1,26 +1,26 @@
 import * as vscode from "vscode";
 import { AgendaDataProvider } from "./agenda";
+import { Context } from "./context";
 
 export function activate(context: vscode.ExtensionContext) {
-  // Prefix of this extention
-  const agendaPrefix = "markdown-agenda";
+  // Application Context
+  const appContext = new Context(context);
+  appContext.debug("activate");
 
   // Agenda Scheme and Provider
-  const agendaDataProvider = new AgendaDataProvider();
-  const agendaScheme = agendaPrefix;
-  context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(agendaScheme, agendaDataProvider));
+  const agendaDataProvider = new AgendaDataProvider(appContext);
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider(appContext.prefixOfDocumentScheme, agendaDataProvider)
+  );
 
   // Commands to be provided
   context.subscriptions.push(
-    vscode.commands.registerCommand(`${agendaPrefix}`, async () => {
-      const uri = vscode.Uri.parse(`${agendaScheme}: agenda`);
+    vscode.commands.registerCommand(`${appContext.prefixOfSettings}`, async () => {
+      const uri = vscode.Uri.parse(`${appContext.prefixOfDocumentScheme}: agenda`);
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(doc, { preview: false });
     })
   );
-
-  // Agenda Commands
-  agendaDataProvider.bindCommands(context);
 }
 
 export function deactivate() {}
