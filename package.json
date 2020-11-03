@@ -60,12 +60,17 @@
 				"command": ".",
 				"key": ".",
 				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "r",
+				"key": "r",
+				"when": "resourceScheme == markdown-agenda"
 			}
 		],
-		"configuration" : {
+		"configuration": {
 			"title": "Markdown Agenda",
 			"properties": {
-				"markdown-agenda.agenda.startOfWeek" : {
+				"markdown-agenda.agenda.startOfWeek": {
 					"type": "integer",
 					"default": 1,
 					"minimum": 0,
@@ -97,6 +102,7 @@
 		"vscode-test": "^1.4.0"
 	},
 	"dependencies": {
-		"moment": "^2.29.1"
+		"moment": "^2.29.1",
+		"vscode-ripgrep": "^1.9.0"
 	}
 }

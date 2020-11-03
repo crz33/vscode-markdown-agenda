@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as moment from "moment";
 import { Context } from "./context";
+import { grepTodo, TodoItem } from "./todo";
 
 const AGENDA_PREFIX = "markdown-agenda";
 
@@ -14,6 +15,8 @@ const MSG_WELCOME = [
 const FORMAT_DATE = "YYYY/MM/DD (ddd)";
 
 const COMMANDS = [
+  { key: `r`, id: `${AGENDA_PREFIX}.refreshTodoList` }, // Refresh TodoList
+
   { key: `a`, id: `${AGENDA_PREFIX}.showAgenda` }, // Show Agenda
   { key: `f`, id: `${AGENDA_PREFIX}.nextPage` }, // Next Page
   { key: `b`, id: `${AGENDA_PREFIX}.previousPage` }, // Previous Page
@@ -39,6 +42,7 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
 
   private agendaView: AgendaView;
   private currentView: View | undefined;
+  private todoList: TodoItem[] = [];
 
   constructor(private appContext: Context) {
     this.viewUri = undefined;
@@ -67,17 +71,22 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
     if (!this.currentView) {
       if (cmdEq(id, "showAgenda")) {
         this.currentView = this.agendaView; // switch agenda view
-        this.reflesh();
+        this.refresh();
       }
     } else {
       // agenda or todo showed
-      if ("changed" === this.currentView.receiveCommand(id)) {
-        this.reflesh();
+      if (cmdEq(id, "refreshTodoList")) {
+        grepTodo(this.appContext).then((todoList) => {
+          this.todoList = todoList;
+          this.refresh();
+        });
+      } else if ("changed" === this.currentView.receiveCommand(id)) {
+        this.refresh();
       }
     }
   }
 
-  private reflesh() {
+  private refresh() {
     jump2line(0);
     this.onDidChangeEmitter.fire(this.viewUri as vscode.Uri);
   }
@@ -87,7 +96,7 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
     if (!this.currentView) {
       return MSG_WELCOME.join("\n");
     } else {
-      return this.currentView.makeView();
+      return this.currentView.makeView(this.todoList);
     }
   }
 }
@@ -193,7 +202,7 @@ class AgendaView implements View {
     return "changed";
   }
 
-  makeView() {
+  makeView(todoList: TodoItem[]) {
     const agendaDate = this.startDate.clone();
 
     // count of date
@@ -213,6 +222,18 @@ class AgendaView implements View {
     const lines: string[] = [];
     for (let i = 0; i < agendaSize; i++) {
       lines.push(agendaDate.format("YYYY/MM/DD (ddd)"));
+      const filterdTodo = todoList.filter((todoItem) => {
+        if (todoItem.scheduled) {
+          const hours = todoItem.scheduled.diff(agendaDate, "minutes");
+          return 0 <= hours && hours < 24 * 60;
+        }
+      });
+      filterdTodo.forEach((todoItem) => {
+        const title = todoItem.title;
+        const priority = todoItem.priority === "" ? "" : `#${todoItem.priority}`;
+        const tags = todoItem.tags.join(",");
+        lines.push(`   ${title} ${priority} ${tags}`);
+      });
       agendaDate.add(1, "days");
     }
     return lines.join("\n");
@@ -221,7 +242,7 @@ class AgendaView implements View {
 
 abstract class View {
   abstract receiveCommand(id: string): ResultOfCommand;
-  abstract makeView(): string;
+  abstract makeView(todoList: TodoItem[]): string;
 }
 
 const cmdEq = (id: string, name: string): boolean => {
