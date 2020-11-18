@@ -65,6 +65,21 @@
 				"command": "r",
 				"key": "r",
 				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "space",
+				"key": "space",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "x",
+				"key": "x",
+				"when": "resourceScheme == markdown-agenda"
+			},
+			{
+				"command": "enter",
+				"key": "enter",
+				"when": "resourceScheme == markdown-agenda"
 			}
 		],
 		"configuration": {

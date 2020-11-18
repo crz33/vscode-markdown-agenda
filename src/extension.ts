@@ -16,9 +16,16 @@ export function activate(context: vscode.ExtensionContext) {
   // Commands to be provided
   context.subscriptions.push(
     vscode.commands.registerCommand(`${appContext.prefixOfSettings}`, async () => {
-      const uri = vscode.Uri.parse(`${appContext.prefixOfDocumentScheme}: agenda`);
+      const uri = vscode.Uri.parse(`${appContext.prefixOfDocumentScheme}:agenda`);
+      for (let doc of vscode.workspace.textDocuments) {
+        appContext.debug(`opend document : ${doc.uri.path}`);
+        // if (doc.uri.scheme === uri.scheme && doc.uri.path === uri.path) {
+        //   // vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Active });
+        //   return;
+        // }
+      }
       const doc = await vscode.workspace.openTextDocument(uri);
-      await vscode.window.showTextDocument(doc, { preview: false });
+      vscode.window.showTextDocument(doc, { preview: false });
     })
   );
 }

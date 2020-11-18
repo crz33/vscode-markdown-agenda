@@ -16,6 +16,9 @@ const FORMAT_DATE = "YYYY/MM/DD (ddd)";
 
 const COMMANDS = [
   { key: `r`, id: `${AGENDA_PREFIX}.refreshTodoList` }, // Refresh TodoList
+  { key: `space`, id: `${AGENDA_PREFIX}.preview` }, // Preview
+  { key: `x`, id: `${AGENDA_PREFIX}.closePreview` }, // Close other window
+  { key: `enter`, id: `${AGENDA_PREFIX}.openDocument` }, // Open document
 
   { key: `a`, id: `${AGENDA_PREFIX}.showAgenda` }, // Show Agenda
   { key: `f`, id: `${AGENDA_PREFIX}.nextPage` }, // Next Page
@@ -42,7 +45,6 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
 
   private agendaView: AgendaView;
   private currentView: View | undefined;
-  private todoList: TodoItem[] = [];
 
   constructor(private appContext: Context) {
     this.viewUri = undefined;
@@ -69,20 +71,20 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
   private handleCommand(id: string) {
     this.appContext.debug(`"${id}" is handled.`);
     if (!this.currentView) {
+      // has no view
       if (cmdEq(id, "showAgenda")) {
         this.currentView = this.agendaView; // switch agenda view
-        this.refresh();
-      }
-    } else {
-      // agenda or todo showed
-      if (cmdEq(id, "refreshTodoList")) {
-        grepTodo(this.appContext).then((todoList) => {
-          this.todoList = todoList;
+        this.currentView.handleCommand(`${AGENDA_PREFIX}.refreshTodoList`).then((result) => {
           this.refresh();
         });
-      } else if ("changed" === this.currentView.receiveCommand(id)) {
-        this.refresh();
       }
+    } else {
+      // view (agenda or todo) has showed
+      this.currentView.handleCommand(id).then((result) => {
+        if (result === "changed") {
+          this.refresh();
+        }
+      });
     }
   }
 
@@ -96,21 +98,95 @@ export class AgendaDataProvider implements vscode.TextDocumentContentProvider {
     if (!this.currentView) {
       return MSG_WELCOME.join("\n");
     } else {
-      return this.currentView.makeView(this.todoList);
+      return this.currentView.makeView();
     }
   }
 }
 
-class AgendaView implements View {
+class View {
+  protected todoList: TodoItem[];
+
+  constructor(protected appContext: Context) {
+    this.todoList = [];
+  }
+
+  handleCommand(id: string): Promise<ResultOfCommand> {
+    return new Promise((resolve) => {
+      if (cmdEq(id, "refreshTodoList")) {
+        // Refresh Todo
+        grepTodo(this.appContext).then((todoList) => {
+          this.updateTodo(todoList);
+          resolve("changed");
+        });
+      } else if (cmdEq(id, "openDocument")) {
+        // OpenDocument
+        this.openTodo(vscode.ViewColumn.Active);
+        resolve("unchanged");
+      } else if (cmdEq(id, "preview")) {
+        // Preview
+        this.openTodo(vscode.ViewColumn.Beside);
+        resolve("unchanged");
+      } else if (cmdEq(id, "closePreview")) {
+        // Close Preview
+        vscode.commands.executeCommand("workbench.action.closeEditorsInOtherGroups");
+        resolve("unchanged");
+      } else {
+        resolve(this.handleViewCommand(id));
+      }
+    });
+  }
+
+  handleViewCommand(id: string): ResultOfCommand {
+    // Nothing
+    return "unchanged";
+  }
+
+  makeView(): string {
+    throw new Error("Not Override makeView");
+  }
+
+  updateTodo(todoList: TodoItem[]) {
+    this.todoList = todoList;
+  }
+
+  openTodo(viewColumn: vscode.ViewColumn) {
+    if (vscode.window.activeTextEditor?.document.uri.scheme === this.appContext.prefixOfDocumentScheme) {
+      const line = vscode.window.activeTextEditor.selections[0].start.line;
+      const charactor = 0;
+      let todoItem: TodoItem;
+      [todoItem] = this.todoList.filter((todoItem) => {
+        return todoItem.viewLineNo === line;
+      });
+      this.appContext.debug(`selected ${todoItem.title} ${todoItem.lineNo}`);
+      vscode.workspace.openTextDocument(todoItem.file).then((document) => {
+        vscode.window.showTextDocument(document, { viewColumn: viewColumn, preserveFocus: true }).then((editor) => {
+          editor.selection = new vscode.Selection(
+            new vscode.Position(todoItem.lineNo, charactor),
+            new vscode.Position(todoItem.lineNo, charactor)
+          );
+          editor.revealRange(
+            new vscode.Range(todoItem.lineNo, charactor, todoItem.lineNo, charactor),
+            vscode.TextEditorRevealType.Default
+          );
+          vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+        });
+      });
+    }
+  }
+}
+
+class AgendaView extends View {
   private startDate: moment.Moment;
   private rangeType: TypeOfRange;
   private waitNextCommand: boolean;
 
-  constructor(private appContext: Context) {
+  constructor(appContext: Context) {
+    super(appContext);
     moment.locale("ja");
     this.startDate = moment();
     this.rangeType = "W";
     this.waitNextCommand = false;
+    this.todoList = [];
     this.init(this.rangeType);
   }
 
@@ -149,7 +225,7 @@ class AgendaView implements View {
     }
   }
 
-  receiveCommand(id: string): ResultOfCommand {
+  handleViewCommand(id: string): ResultOfCommand {
     this.appContext.debug(`"${id}" is received.`);
 
     if (this.waitNextCommand) {
@@ -202,7 +278,9 @@ class AgendaView implements View {
     return "changed";
   }
 
-  makeView(todoList: TodoItem[]) {
+  makeView() {
+    this.todoList.forEach((todoItem) => (todoItem.viewLineNo = -1));
+    let lineNo = 0;
     const agendaDate = this.startDate.clone();
 
     // count of date
@@ -222,7 +300,8 @@ class AgendaView implements View {
     const lines: string[] = [];
     for (let i = 0; i < agendaSize; i++) {
       lines.push(agendaDate.format("YYYY/MM/DD (ddd)"));
-      const filterdTodo = todoList.filter((todoItem) => {
+      lineNo++;
+      const filterdTodo = this.todoList.filter((todoItem) => {
         if (todoItem.scheduled) {
           const hours = todoItem.scheduled.diff(agendaDate, "minutes");
           return 0 <= hours && hours < 24 * 60;
@@ -233,16 +312,12 @@ class AgendaView implements View {
         const priority = todoItem.priority === "" ? "" : `#${todoItem.priority}`;
         const tags = todoItem.tags.join(",");
         lines.push(`   ${title} ${priority} ${tags}`);
+        todoItem.viewLineNo = lineNo++;
       });
       agendaDate.add(1, "days");
     }
     return lines.join("\n");
   }
-}
-
-abstract class View {
-  abstract receiveCommand(id: string): ResultOfCommand;
-  abstract makeView(todoList: TodoItem[]): string;
 }
 
 const cmdEq = (id: string, name: string): boolean => {

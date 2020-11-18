@@ -82,6 +82,8 @@ export class TodoItem {
   public deadlined: moment.Moment | undefined;
   public priority: string;
   public tags: string[];
+  // view option
+  public viewLineNo = -1;
 
   constructor(line: string, parser: Parser) {
     // Parse ripgrep result, to file, lineno, columnno, text
@@ -89,8 +91,8 @@ export class TodoItem {
     if (matchOfRipgrep && matchOfRipgrep.groups) {
       // Normal
       this.file = matchOfRipgrep.groups.file;
-      this.lineNo = Number(matchOfRipgrep.groups.line);
-      this.columnNo = Number(matchOfRipgrep.groups.column);
+      this.lineNo = Number(matchOfRipgrep.groups.line) - 1;
+      this.columnNo = Number(matchOfRipgrep.groups.column) - 1;
       this.todoLine = matchOfRipgrep.groups.text;
     } else {
       // for Windows ( c:\xxx ) ?
@@ -101,8 +103,8 @@ export class TodoItem {
       }
       const junkLine = line.split(":");
       this.file = junkLine.shift() as string;
-      this.lineNo = Number(junkLine.shift() as string);
-      this.columnNo = Number(junkLine.shift() as string);
+      this.lineNo = Number(junkLine.shift() as string) - 1;
+      this.columnNo = Number(junkLine.shift() as string) - 1;
       this.todoLine = junkLine.join(":");
     }
 
@@ -145,7 +147,7 @@ interface TagData {
 class Parser {
   private readonly regexOfRipgrep = RegExp(/^(?<file>.*):(?<line>\d+):(?<column>\d+):(?<text>.*)/);
   private readonly regexOfTodoLine = RegExp(
-    /^#\s+(?<state>TODO|DONE)\s+(?<title>.+?)(?<tags>(\s+\@[\w\-#]+(\(.*\))*)*)\s*$/
+    /^#+\s+(?<state>TODO|DONE)\s+(?<title>.+?)(?<tags>(\s+\@[\w\-#]+(\(.*\))*)*)\s*$/
   );
   private readonly scheduledTags = ["scheduled", "s"];
   private readonly deadlinedTags = ["deadlined", "d"];
